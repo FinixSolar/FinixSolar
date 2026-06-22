@@ -4,6 +4,7 @@ import "./globals.css";
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import { AuthProvider } from "@/components/AuthProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import "leaflet/dist/leaflet.css";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -49,12 +50,16 @@ export default function RootLayout({ children }) {
             `,
           }}
         />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=open_in_new"
+        />
       </head>
-      <body className={`${poppins.className} min-h-full flex flex-col bg-[#f8fafc] dark:bg-[#023047] text-[#023047] dark:text-[#8ecae6] transition-colors duration-200`}>
+      <body
+        className={`${poppins.className} min-h-full flex flex-col bg-[#f8fafc] dark:bg-[#023047] text-[#023047] dark:text-[#8ecae6] transition-colors duration-200`}
+      >
         <ThemeProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
+          <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>
     </html>

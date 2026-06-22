@@ -15,8 +15,8 @@ export default function Home() {
       <main className="flex-1 flex flex-col items-center justify-center pt-32 px-6 md:px-12 relative z-10">
         
         {/* Glowing Blobs */}
-        <div className="absolute top-[10%] left-[-15%] w-[450px] h-[450px] rounded-full bg-blue/10 dark:bg-blue/5 blur-[100px] pointer-events-none"></div>
-        <div className="absolute bottom-[10%] right-[-15%] w-[450px] h-[450px] rounded-full bg-orange/10 dark:bg-orange/5 blur-[100px] pointer-events-none"></div>
+        <div className="absolute top-[10%] left-[-15%] w-112.5 h-112.5 rounded-full bg-blue/10 dark:bg-blue/5 blur-[100px] pointer-events-none"></div>
+        <div className="absolute bottom-[10%] right-[-15%] w-112.5 h-112.5 rounded-full bg-orange/10 dark:bg-orange/5 blur-[100px] pointer-events-none"></div>
 
         {/* Content */}
         <div className="max-w-4xl text-center space-y-8 animate-fade-in">
@@ -28,7 +28,7 @@ export default function Home() {
 
           {/* Heading */}
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-navy dark:text-white leading-tight">
-            Powering the Future with <span className="bg-gradient-to-r from-blue via-sky to-orange bg-clip-text text-transparent">Clean Energy</span>
+            Powering the Future with <span className="bg-linear-to-r from-blue via-sky to-orange bg-clip-text text-transparent">Clean Energy</span>
           </h1>
 
           {/* Paragraph */}
@@ -41,7 +41,7 @@ export default function Home() {
             {user ? (
               <Link
                 href="/dashboard"
-                className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-blue to-sky hover:opacity-95 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-blue/15 hover:shadow-blue/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto px-8 py-3.5 bg-linear-to-r from-blue to-sky hover:opacity-95 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-blue/15 hover:shadow-blue/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Go to Dashboard</span>
                 <i className="fa-solid fa-arrow-right"></i>
@@ -50,7 +50,7 @@ export default function Home() {
               <>
                 <Link
                   href="/login"
-                  className="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-blue to-sky hover:opacity-95 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-blue/15 hover:shadow-blue/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full sm:w-auto px-8 py-3.5 bg-linear-to-r from-blue to-sky hover:opacity-95 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-blue/15 hover:shadow-blue/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span>Access Portal</span>
                   <i className="fa-solid fa-right-to-bracket"></i>

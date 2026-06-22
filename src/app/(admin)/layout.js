@@ -3,6 +3,7 @@
 import { useAuth } from "@/components/AuthProvider";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import "leaflet/dist/leaflet.css";
 
 export default function AdminLayout({ children }) {
   const { user, loading } = useAuth();
@@ -22,7 +23,9 @@ export default function AdminLayout({ children }) {
             <div className="absolute h-16 w-16 animate-spin rounded-full border-4 border-[#1e6cfc] border-t-transparent"></div>
             <div className="h-8 w-8 rounded-full bg-[#ffc600] animate-pulse"></div>
           </div>
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loading Finix Solar Dashboard...</p>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            Loading Finix Solar Dashboard...
+          </p>
         </div>
       </div>
     );
@@ -36,7 +39,9 @@ export default function AdminLayout({ children }) {
             <div className="absolute h-16 w-16 animate-spin rounded-full border-4 border-[#1e6cfc] border-t-transparent"></div>
             <div className="h-8 w-8 rounded-full bg-[#ffc600] animate-pulse"></div>
           </div>
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Redirecting to login...</p>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            Redirecting to login...
+          </p>
         </div>
       </div>
     );

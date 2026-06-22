@@ -56,7 +56,7 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body
-        className={`${poppins.className} min-h-full flex flex-col bg-[#f8fafc] dark:bg-[#023047] text-[#023047] dark:text-[#8ecae6] transition-colors duration-200`}
+        className={`${poppins.className} min-h-full flex flex-col bg-[#f8fafc] dark:bg-navy text-navy dark:text-sky transition-colors duration-200`}
       >
         <ThemeProvider>
           <AuthProvider>{children}</AuthProvider>

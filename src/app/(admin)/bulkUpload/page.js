@@ -135,7 +135,7 @@ const BulkUpload = () => {
           <div className="w-16 h-16 bg-blue-600/20 rounded-2xl flex items-center justify-center mb-4 border border-blue-500/30">
             <i className="fas fa-file-excel text-3xl text-blue-400"></i>
           </div>
-          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold tracking-tight bg-linear-to-r from-white to-gray-400 bg-clip-text text-transparent">
             Bulk Data Upload
           </h1>
           <p className="text-gray-400 mt-2 text-center max-w-md">

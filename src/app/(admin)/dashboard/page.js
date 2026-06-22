@@ -145,7 +145,7 @@ export default function Dashboard() {
             </p>
           </div>
           <Link href="/addClient">
-            <button className="px-5 py-3 bg-gradient-to-r from-blue to-sky hover:opacity-95 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-blue/10 flex items-center gap-2 cursor-pointer transition-all">
+            <button className="px-5 py-3 bg-linear-to-r from-blue to-sky hover:opacity-95 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-blue/10 flex items-center gap-2 cursor-pointer transition-all">
               <i className="fa-solid fa-user-plus"></i>
               Add New Client
             </button>

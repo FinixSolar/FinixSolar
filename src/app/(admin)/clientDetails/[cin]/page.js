@@ -184,7 +184,7 @@ export default function ClientDetailsPage() {
           <div className="bg-white rounded-2xl shadow p-5">
             <p className="text-xs text-slate-500">Qoutation Amount</p>
 
-            <h3 className="text-gray-700    text-2xl font-bold text-yellow-500">
+            <h3 className="text-2xl font-bold text-yellow-500">
               ₹{payment?.quotationAmount || 0}
             </h3>
           </div>
@@ -200,7 +200,7 @@ export default function ClientDetailsPage() {
           <div className="bg-white rounded-2xl shadow p-5">
             <p className="text-xs text-slate-500">Paid</p>
 
-            <h3 className="text-gray-700    text-2xl font-bold text-green-600">
+            <h3 className="text-2xl font-bold text-green-600">
               ₹{payment?.payedAmount || 0}
             </h3>
           </div>
@@ -208,7 +208,7 @@ export default function ClientDetailsPage() {
           <div className="bg-white rounded-2xl shadow p-5">
             <p className="text-xs text-slate-500">Remaining</p>
 
-            <h3 className="text-gray-700    text-2xl font-bold text-red-600">
+            <h3 className="text-2xl font-bold text-red-600">
               ₹{payment?.remainingAmount || 0}
             </h3>
           </div>

@@ -98,7 +98,7 @@ export default function ClientMap({ selectedClient, nearestClients = [] }) {
         </Tooltip>
 
         <Popup>
-          <div className="min-w-[200px]">
+          <div className="min-w-50">
             <h3 className="font-bold text-lg">{selectedClient.consumerName}</h3>
 
             <p>CIN: {selectedClient.CIN}</p>
@@ -142,7 +142,7 @@ export default function ClientMap({ selectedClient, nearestClients = [] }) {
             {/* Marker */}
             <Marker position={[clientLat, clientLng]} icon={nearestIcon}>
               <Popup>
-                <div className="min-w-[220px]">
+                <div className="min-w-55">
                   <h3 className="font-bold">{client.consumerName}</h3>
 
                   <p>CIN: {client.CIN}</p>

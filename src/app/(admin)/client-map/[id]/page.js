@@ -131,7 +131,7 @@ export default function ClientMapPage() {
               </h2>
             </div>
 
-            <div className="h-[650px]">
+            <div className="h-162.5">
               <ClientMap
                 selectedClient={selectedClient}
                 clients={allClients}
@@ -148,7 +148,7 @@ export default function ClientMapPage() {
               </h2>
             </div>
 
-            <div className="max-h-[650px] overflow-y-auto">
+            <div className="max-h-162.5 overflow-y-auto">
               {nearestClients.map((client, index) => (
                 <div
                   key={client.id}

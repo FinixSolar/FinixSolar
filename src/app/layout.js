@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import "leaflet/dist/leaflet.css";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -64,6 +65,8 @@ export default function RootLayout({ children }) {
           <AuthProvider>
             <Toaster position="top-right" />
             {children}
+            <SpeedInsights />
+            <Analytics />
           </AuthProvider>
         </ThemeProvider>
       </body>

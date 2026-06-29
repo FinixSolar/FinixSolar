@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Navbar from "@/components/Navbar/page";
+import Link from "next/link";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function ClientDetailsPage() {
   const router = useRouter();
@@ -18,10 +20,18 @@ export default function ClientDetailsPage() {
   const [gtis, setGtis] = useState([]);
   const [meter, setMeter] = useState(null);
   const [fileStatus, setFileStatus] = useState(null);
+  const [role, setRole] = useState("viewer");
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchData();
   }, [cin]);
+
+  useEffect(() => {
+    if (user) {
+      fetchRole();
+    }
+  }, [user]);
 
   const fetchData = async () => {
     try {
@@ -92,9 +102,23 @@ export default function ClientDetailsPage() {
         setMeter(meterData);
       }
     } catch (error) {
-      console.error(error);
+      console.log(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchRole = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    console.log(data, user.id, error);
+
+    if (!error) {
+      setRole(data.role);
     }
   };
 
@@ -107,8 +131,16 @@ export default function ClientDetailsPage() {
 
   if (loading) {
     return (
-      <div className="p-6">
-        <h1 className="text-xl font-semibold">Loading...</h1>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-zinc-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative flex h-16 w-16 items-center justify-center">
+            <div className="absolute h-16 w-16 animate-spin rounded-full border-4 border-[#1e6cfc] border-t-transparent"></div>
+            <div className="h-8 w-8 rounded-full bg-[#ffc600] animate-pulse"></div>
+          </div>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            Fetching Client Detials....
+          </p>
+        </div>
       </div>
     );
   }
@@ -128,23 +160,49 @@ export default function ClientDetailsPage() {
         <div className="flex justify-between items-center">
           <button
             onClick={() => router.back()}
-            className="px-4 py-2 bg-white rounded-xl shadow text-sm font-medium"
+            className="px-4 py-2 bg-white rounded-xl shadow text-xs sm:text-sm font-medium"
           >
             ← Back
           </button>
 
-          <h1 className="text-3xl font-bold">Client Details</h1>
+          <h1 className="text-lg sm:text-3xl font-bold">Client Details</h1>
 
-          <div></div>
+          <div className="px-4 ">
+            {["developer", "admin", "sales"].includes(role) && (
+              <Link href={`/clients/${client.id}`}>
+                <span className="material-symbols-outlined">edit</span>
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Client Details */}
         <div className="bg-white rounded-3xl shadow p-6">
-          <h2 className="text-gray-700 text-2xl font-bold">
-            {client.consumerName}
-          </h2>
+          <div className="flex justify-between">
+            <div>
+              <h2 className="text-gray-700 text-2xl font-bold">
+                {client.consumerName}
+              </h2>
 
-          <p className="text-slate-500 mt-1 font-bold">CIN : {client.CIN}</p>
+              <p className="text-slate-500 mt-1 font-bold">
+                CIN : {client.CIN}
+              </p>
+            </div>
+
+            {client.paymentType && (
+              <span
+                className={`inline-flex items-center justify-center px-4 py-1.5 h-fit text-sm font-semibold rounded-full whitespace-nowrap ${
+                  client.paymentType === "Cash"
+                    ? "bg-green-100 text-green-700"
+                    : client.paymentType === "Loan"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-gray-100 text-gray-700"
+                }`}
+              >
+                {client.paymentType}
+              </span>
+            )}
+          </div>
 
           <div className="grid md:grid-cols-4 gap-4 mt-6">
             <div>
@@ -159,9 +217,21 @@ export default function ClientDetailsPage() {
               <p className="text-xs text-slate-500">Contact</p>
 
               <p className="font-semibold text-gray-600">
-                {client.contactPersonNumber}
+                {client.subsidyMobile}
               </p>
             </div>
+
+            {client.contactPersonNumber
+              ? client.contactPersonNumber !== client.subsidyMobile
+              : false && (
+                  <div>
+                    <p className="text-xs text-slate-500">Contact Per</p>
+
+                    <p className="font-semibold text-gray-600">
+                      {client.contactPersonNumber}
+                    </p>
+                  </div>
+                )}
 
             <div>
               <p className="text-xs text-slate-500">Email</p>
@@ -180,12 +250,33 @@ export default function ClientDetailsPage() {
         </div>
 
         {/* Payment Details */}
+        <div className="flex justify-between items-center px-4">
+          {payment && (
+            <Link
+              href={`/payments/${payment.id}`}
+              className="inline-flex py-1 px-3 rounded-full bg-blue-200 text-blue-800"
+            >
+              View
+            </Link>
+          )}
+          {payment && (
+            <p
+              className={
+                payment.paymentStatus === "Pending"
+                  ? "bg-red-200 text-red-800 inline-flex py-1 px-3 rounded-full"
+                  : "bg-green-200 text-green-800 inline-flex py-1 px-3 rounded-full"
+              }
+            >
+              {payment.paymentStatus}
+            </p>
+          )}
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-2xl shadow p-5">
             <p className="text-xs text-slate-500">Qoutation Amount</p>
 
             <h3 className="text-2xl font-bold text-yellow-500">
-              ₹{payment?.quotationAmount || 0}
+              ₹{payment?.quotationAmount.toLocaleString("en-IN") || 0}
             </h3>
           </div>
 
@@ -193,7 +284,7 @@ export default function ClientDetailsPage() {
             <p className="text-xs text-slate-500">Total Cost</p>
 
             <h3 className="text-gray-700    text-2xl font-bold">
-              ₹{payment?.totalCost || 0}
+              ₹{payment?.totalCost.toLocaleString("en-IN") || 0}
             </h3>
           </div>
 
@@ -201,7 +292,7 @@ export default function ClientDetailsPage() {
             <p className="text-xs text-slate-500">Paid</p>
 
             <h3 className="text-2xl font-bold text-green-600">
-              ₹{payment?.payedAmount || 0}
+              ₹{payment?.payedAmount.toLocaleString("en-IN") || 0}
             </h3>
           </div>
 
@@ -209,7 +300,7 @@ export default function ClientDetailsPage() {
             <p className="text-xs text-slate-500">Remaining</p>
 
             <h3 className="text-2xl font-bold text-red-600">
-              ₹{payment?.remainingAmount || 0}
+              ₹{payment?.remainingAmount.toLocaleString("en-IN") || 0}
             </h3>
           </div>
         </div>

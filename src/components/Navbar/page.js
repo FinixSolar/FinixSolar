@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { useTheme } from "@/components/ThemeProvider";
 import { useRouter, usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { Bell } from "lucide-react";
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
@@ -13,15 +15,85 @@ const Navbar = () => {
   const pathname = usePathname();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [role, setRole] = useState("viewer");
+  const [notifications, setNotifications] = useState([]);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [isRead, setIsRead] = useState(false);
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  // useEffect(() => {
+  //   if (user) {
+  //     fetchRole();
+  //   }
+  // }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchNotifications = async () => {
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!error) {
+        setNotifications(data || []);
+      }
+    };
+
+    fetchNotifications();
+  }, [user]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("notifications")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+        },
+        (payload) => {
+          setNotifications((prev) => [payload.new, ...prev]);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user]);
+
+  const fetchRole = useCallback(async () => {
+    if (!user?.id) return;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    setRole(data?.role || "viewer");
+  }, [user]);
+
+  useEffect(() => {
+    fetchRole();
+  }, [fetchRole]);
 
   const handleSignOut = async () => {
     try {
       await signOut();
+      setNotifications([]);
       setDropdownOpen(false);
       setMobileMenuOpen(false);
       router.push("/");
     } catch (err) {
-      console.error("Error signing out:", err);
+      console.log("Error signing out:", err);
     }
   };
 
@@ -39,23 +111,63 @@ const Navbar = () => {
     return user.email ? user.email[0].toUpperCase() : "U";
   };
 
-  const linkClass = (path) => {
-    const isActive = pathname === path;
-    return `px-4 h-full flex items-center text-sm font-semibold transition-all duration-200 border-b-2 ${
-      isActive
-        ? "text-blue border-blue dark:text-sky dark:border-sky bg-blue/5 dark:bg-sky/5 py-2 px-1 rounded-tl-lg rounded-tr-lg mb-2"
-        : "text-slate-600 dark:text-slate-300 border-transparent hover:text-blue hover:border-blue/50 dark:hover:text-sky dark:hover:border-sky/50 py-2 px-1 rounded-tl-lg rounded-tr-lg mb-2"
-    }`;
+  const linkClass = useCallback(
+    (path) => {
+      const isActive = pathname === path;
+      return `px-4 h-full flex items-center text-sm font-semibold transition-all duration-200 border-b-2 ${
+        isActive
+          ? "text-blue border-blue dark:text-sky dark:border-sky bg-blue/5 dark:bg-sky/5 py-2 px-1 rounded-tl-lg rounded-tr-lg mb-2"
+          : "text-slate-600 dark:text-slate-300 border-transparent hover:text-blue hover:border-blue/50 dark:hover:text-sky dark:hover:border-sky/50 py-2 px-1 rounded-tl-lg rounded-tr-lg mb-2"
+      }`;
+    },
+    [pathname],
+  );
+
+  const markAsRead = async (notificationId) => {
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .eq("id", notificationId);
+
+    if (error) {
+      console.log("Failed to mark notification as read:", error);
+      return;
+    }
+
+    // Update UI instantly
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n)),
+    );
+  };
+
+  const markAllAsRead = async () => {
+    const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
+
+    if (!unreadIds.length) return;
+
+    const { error } = await supabase
+      .from("notifications")
+      .update({ is_read: true })
+      .in("id", unreadIds);
+
+    if (!error) {
+      setNotifications((prev) =>
+        prev.map((n) => ({
+          ...n,
+          is_read: true,
+        })),
+      );
+    }
   };
 
   return (
-    <div className="w-full relative">
-      <nav className="w-full glass-nav fixed top-0 z-50 transition-all duration-300">
-        <div className="flex w-full items-center justify-between px-6 md:px-12 h-16">
+    <div className="w-screen relative box-border">
+      <nav className="w-full glass-nav fixed top-0 right-0 left-0 z-50 transition-all duration-300 box-border">
+        <div className=" box-border flex w-full items-center justify-between px-4 sm:px-6 md:px-12 h-16">
           {/* Logo */}
           <div className="flex items-center space-x-8">
             <Link href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue to-sky flex items-center justify-center shadow-md shadow-blue/20 group-hover:scale-105 transition-transform duration-300">
+              <div className="w-9 h-9 rounded-xl bg-linear-to-tr from-blue to-sky flex items-center justify-center shadow-md shadow-blue/20 group-hover:scale-105 transition-transform duration-300">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
@@ -71,7 +183,7 @@ const Navbar = () => {
                   />
                 </svg>
               </div>
-              <span className="font-bold text-navy dark:text-white text-xl tracking-tight">
+              <span className="font-bold text-navy dark:text-white text-lg sm:text-xl tracking-tight">
                 Finix<span className="text-orange">Solar</span>
               </span>
             </Link>
@@ -82,22 +194,92 @@ const Navbar = () => {
                 <Link href="/dashboard" className={linkClass("/dashboard")}>
                   Dashboard
                 </Link>
-                <Link href="/addClient" className={linkClass("/addClient")}>
-                  Add Client
-                </Link>
-                <Link href="/bulkUpload" className={linkClass("/bulkUpload")}>
-                  Bulk Upload
-                </Link>
+                {["developer", "admin", "salesb2c"].includes(role) && (
+                  <Link href="/addClient" className={linkClass("/addClient")}>
+                    Add Client
+                  </Link>
+                )}
+                {["developer", "admin", "salesb2c"].includes(role) && (
+                  <Link href="/bulkUpload" className={linkClass("/bulkUpload")}>
+                    Bulk Upload
+                  </Link>
+                )}
                 <Link href="/members" className={linkClass("/members")}>
                   Members
+                </Link>
+                <Link
+                  href="/payments/logs"
+                  className={linkClass("/payments/logs")}
+                >
+                  Payments Logs
                 </Link>
               </div>
             )}
           </div>
 
           {/* Right Section */}
-          <div className="flex items-center gap-4">
-            <div className="relative">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="relative flex">
+              <button
+                aria-label="Notifications"
+                title="Notifications"
+                className="relative flex items-center justify-center cursor-pointer"
+                onClick={() => setNotificationOpen(!notificationOpen)}
+              >
+                <Bell size={22} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-2 -right-2 min-w-5 h-5 flex items-center justify-center bg-red-500 text-white text-xs rounded-full px-1">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+              {notificationOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-lg py-2 px-4 text-gray-900">
+                  <button
+                    onClick={markAllAsRead}
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    Mark All Read
+                  </button>
+                  {/* <p>Notifications</p> */}
+                  {notifications.map((n) => (
+                    <div
+                      key={n.id}
+                      className={`border-b py-3 px-4 ${
+                        !n.is_read ? "bg-blue-50" : ""
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <p className="font-bold">{n.title}</p>
+
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            n.is_read
+                              ? "bg-gray-100 text-gray-600"
+                              : "bg-blue-100 text-blue-700"
+                          }`}
+                        >
+                          {n.is_read ? "Read" : "Unread"}
+                        </span>
+                      </div>
+
+                      <p>{n.message}</p>
+                      <p className="text-xs text-gray-500">
+                        By: {n.creator_name}
+                      </p>
+
+                      {!n.is_read && (
+                        <button
+                          onClick={() => markAsRead(n.id)}
+                          className="text-xs px-3 py-1 bg-green-300 text-green-900 rounded-full"
+                        >
+                          Mark as Read
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
               {/* nav toggel btn */}
               <button
                 className="md:hidden w-9 h-9 rounded-xl flex items-center justify-center bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-sky hover:bg-slate-200 dark:hover:bg-slate-700 transition-all duration-200 cursor-pointer"
@@ -108,16 +290,36 @@ const Navbar = () => {
               {/* nav drop */}
               {mobileMenuOpen && (
                 <div className="absolute right-0 mt-3.5 w-60 bg-white dark:bg-navy border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl py-4 px-3 z-50 animate-fade-in">
-                  <Link href="/dashboard" className={linkClass("/dashboard")}>
+                  <Link
+                    href="/dashboard"
+                    className={linkClass("/dashboard")}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
                     Dashboard
                   </Link>
-                  <Link href="/addClient" className={linkClass("/addClient")}>
-                    Add Client
-                  </Link>
-                  <Link href="/bulkUpload" className={linkClass("/bulkUpload")}>
-                    Bulk Upload
-                  </Link>
-                  <Link href="/members" className={linkClass("/members")}>
+                  {["developer", "admin", "salesb2c"].includes(role) && (
+                    <Link
+                      href="/addClient"
+                      className={linkClass("/addClient")}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Add Client
+                    </Link>
+                  )}
+                  {["developer", "admin", "salesb2c"].includes(role) && (
+                    <Link
+                      href="/bulkUpload"
+                      className={linkClass("/bulkUpload")}
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      Bulk Upload
+                    </Link>
+                  )}
+                  <Link
+                    href="/members"
+                    className={linkClass("/members")}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
                     Members
                   </Link>
                 </div>

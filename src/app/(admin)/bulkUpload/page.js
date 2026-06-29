@@ -45,7 +45,7 @@ const BulkUpload = () => {
         setError(
           "Failed to parse Excel file. Please ensure it's a valid format.",
         );
-        console.error(err);
+        console.log(err);
       }
     };
     reader.readAsBinaryString(selectedFile);
@@ -73,6 +73,274 @@ const BulkUpload = () => {
     return newRow;
   });
 
+  const mapPIDRow = (row) => ({
+    CIN: row["CIN"],
+
+    date: row["Date"],
+
+    consumerName: row["Consumer Name"],
+    consumerNumber: row["Consumer No."],
+
+    address: row["Consumer Address"],
+
+    mobileNo: row["Mobile No."],
+
+    paymentType: row["Payment Type"],
+
+    payedAmount: row["payedAmount"],
+
+    remainingAmount: row["remainingAmount"],
+
+    paymentStatus: row["paymentStatus"],
+
+    installmentCount: row["installmentCount"],
+
+    nextDueDate: row["nextDueDate"],
+
+    email: row["Email"],
+
+    RTSCapacity: row["RTS Capacity"],
+
+    quotationAmount: row["Quote Amt."],
+
+    billingUnit: row["Billing Unit"],
+
+    pvmMake: row["PVM Make"],
+    pvmWattage: row["PVM Wp"],
+    pvmQuantity: row["No. of PVM"],
+    pvmSerialNumber: row["PVM SN"],
+
+    gtiMake: row["GT Inv. Make"],
+    gtiCapacity: row["GT Inv. Cap."],
+    gtiSerialNumber: row["Inverter SN"],
+
+    gnMake: row["Gen. Meter Make"],
+    gnSerialNumber: row["Gen. Meter SN"],
+
+    netMake: row["Net Meter Make"],
+    netSerialNumber: row["Net Meter SN"],
+
+    commissioningDate: row["Commissioning Date"],
+
+    totalCost: row["Deal Amt."],
+  });
+
+  const uploadPID = async (rows) => {
+    let processedCount = 0;
+
+    for (const rawRow of rows) {
+      const row = mapPIDRow(rawRow);
+
+      const cin = row.CIN?.toString().trim();
+
+      if (!cin) {
+        throw new Error("CIN is required");
+      }
+
+      // ==========================
+      // CLIENT
+      // ==========================
+
+      const { data: client, error: clientError } = await supabase
+        .from("Clients")
+        .upsert(
+          {
+            CIN: cin,
+
+            date: row.date,
+
+            consumerName: row.consumerName,
+
+            consumerNumber: row.consumerNumber,
+
+            address: row.address,
+
+            subsidyMobile: row.mobileNo,
+
+            subsidyEmail: row.email,
+
+            paymentType: row.paymentType,
+          },
+          {
+            onConflict: "CIN",
+          },
+        )
+        .select()
+        .single();
+
+      if (clientError) throw clientError;
+
+      // ==========================
+      // PVM
+      // ==========================
+
+      const { data: pvm, error: pvmError } = await supabase
+        .from("PVM")
+        .insert({
+          CIN: cin,
+
+          make: row.pvmMake,
+
+          wattage: row.pvmWattage,
+
+          quantity: row.pvmQuantity,
+
+          serialNumber: row.pvmSerialNumber,
+
+          clientId: client.id,
+        })
+        .select()
+        .single();
+
+      if (pvmError) throw pvmError;
+
+      // ==========================
+      // GTI
+      // ==========================
+
+      const { data: gti, error: gtiError } = await supabase
+        .from("GTI")
+        .insert({
+          CIN: cin,
+
+          make: row.gtiMake,
+
+          capacity: row.gtiCapacity,
+
+          serialNumber: row.gtiSerialNumber,
+
+          clientId: client.id,
+        })
+        .select()
+        .single();
+
+      if (gtiError) throw gtiError;
+
+      // ==========================
+      // METER
+      // ==========================
+
+      const { data: meter, error: meterError } = await supabase
+        .from("meter")
+        .insert({
+          CIN: cin,
+
+          GnMake: row.gnMake,
+
+          GnSerialNumber: row.gnSerialNumber,
+
+          netMake: row.netMake,
+
+          netSerialNumber: row.netSerialNumber,
+
+          clientId: client.id,
+        })
+        .select()
+        .single();
+
+      if (meterError) throw meterError;
+
+      // ==========================
+      // PAYMENT
+      // ==========================
+
+      // Helper function to safely parse currency strings OR numbers
+      const parseCurrency = (val) => {
+        if (val === undefined || val === null || val === "") return 0;
+        if (typeof val === "number") return val;
+
+        // Convert to string first in case it's an unexpected type, then replace
+        return Number(val.toString().replace(/[₹,]/g, ""));
+      };
+
+      const parsedTotalCost = parseCurrency(row.totalCost);
+      const parsedQuotationAmount = parseCurrency(row.quotationAmount);
+      const parsedPayedAmount = parseCurrency(row.payedAmount);
+
+      // Calculate remaining amount safely
+      const calculatedRemaining =
+        row.remainingAmount !== undefined
+          ? parseCurrency(row.remainingAmount)
+          : parsedTotalCost - parsedPayedAmount;
+
+      // Calculate status based on the exact parsed value
+      const calculatedStatus =
+        calculatedRemaining <= 0 ? "Paid" : "Partially Paid";
+
+      const { data: payment, error: paymentError } = await supabase
+        .from("Payments")
+        .insert({
+          clientId: client.id,
+          CIN: cin,
+          type: row.paymentType,
+          totalCost: parsedTotalCost,
+          quotationAmount: parsedQuotationAmount,
+          payedAmount: parsedPayedAmount,
+          remainingAmount: calculatedRemaining,
+          paymentStatus: calculatedStatus, // Pass the evaluated string!
+          installmentCount: row.installmentCount
+            ? Number(row.installmentCount)
+            : 0,
+          nextDueDate: row.nextDueDate ? row.nextDueDate : null,
+        })
+        .select()
+        .single();
+
+      if (paymentError) throw paymentError;
+
+      // ==========================
+      // FILES
+      // ==========================
+
+      const { data: fileRecord, error: fileError } = await supabase
+        .from("files")
+        .insert({
+          CIN: cin,
+        })
+        .select()
+        .single();
+
+      if (fileError) throw fileError;
+
+      // ==========================
+      // INSTALLATION
+      // ==========================
+
+      const { error: installationError } = await supabase
+        .from("Installations")
+        .insert({
+          CIN: cin,
+
+          RTSCapacity: Number(row.RTSCapacity ? row.RTSCapacity : 0),
+
+          billingUnit: Number(row.billingUnit ? row.billingUnit : 0),
+
+          commissioningDate: row.commissioningDate,
+
+          PVMId: pvm.id,
+
+          GTIId: gti.id,
+
+          meterId: meter.id,
+
+          paymentId: payment.id,
+
+          fileId: fileRecord.id,
+
+          clientId: client.id,
+        });
+
+      if (installationError) throw installationError;
+
+      processedCount++;
+
+      setStats((prev) => ({
+        ...prev,
+        processed: processedCount,
+      }));
+    }
+  };
+
   const handleUpload = async () => {
     if (!tableName.trim()) {
       setError("Please enter a table name.");
@@ -88,22 +356,26 @@ const BulkUpload = () => {
     setSuccess(null);
 
     try {
+      if (tableName.trim().toUpperCase() === "PID") {
+        await uploadPID(processedData);
+
+        setSuccess(`Successfully uploaded ${processedData.length} PID records`);
+        setLoading(false);
+
+        return;
+      }
+
       // Bulk insert in chunks to avoid timeout or payload limit issues
       const chunkSize = 500;
       let processedCount = 0;
 
       for (let i = 0; i < data.length; i += chunkSize) {
         const chunk = processedData.slice(i, i + chunkSize);
-        console.log("chunk to insert:", chunk);
         const { error: insertError } = await supabase
           .from(tableName.trim())
           .insert(chunk);
 
         if (insertError) throw insertError;
-
-        console.log(
-          `Inserted records ${i + 1} to ${Math.min(i + chunkSize, data.length)}`,
-        );
 
         processedCount += chunk.length;
         setStats((prev) => ({ ...prev, processed: processedCount }));
@@ -149,7 +421,7 @@ const BulkUpload = () => {
           <div className="space-y-6">
             <div className="p-8 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl shadow-2xl">
               <label className="block text-sm font-medium text-gray-400 mb-2 px-1">
-                Target Table Name
+                Type of DATA
               </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -160,7 +432,7 @@ const BulkUpload = () => {
                   value={tableName}
                   onChange={(e) => setTableName(e.target.value)}
                   className="block w-full pl-11 pr-4 py-3.5 bg-gray-900/50 border border-white/10 rounded-2xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all outline-none text-white placeholder-gray-600"
-                  placeholder="e.g. clients_data"
+                  placeholder="e.g. Clients"
                 />
               </div>
             </div>

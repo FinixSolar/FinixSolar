@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -12,10 +13,32 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [role, setRole] = useState("viewer");
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      fetchRole();
+    }
+  }, [user]);
 
   useEffect(() => {
     fetchClients();
   }, []);
+
+  const fetchRole = async () => {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    console.log(data, user.id, error);
+
+    if (!error) {
+      setRole(data.role);
+    }
+  };
 
   const fetchClients = async () => {
     try {
@@ -91,6 +114,10 @@ export default function Dashboard() {
   };
 
   const handleDelete = async (clientId) => {
+    if (!["developer", "admin"].includes(role)) {
+      alert("You don't have permission");
+      return;
+    }
     if (!confirm("Are you sure you want to delete this client?")) return;
     console.log(
       `Attempting to delete client with ID ${clientId} from Supabase...`,
@@ -112,7 +139,7 @@ export default function Dashboard() {
       setClients(clients.filter((c) => c.id !== clientId));
       alert("Client deleted successfully!");
     } catch (err) {
-      console.error("Failed to delete client from Supabase:", err);
+      console.log("Failed to delete client from Supabase:", err);
       // Fallback local deletion
       setClients(clients.filter((c) => c.id !== clientId));
       alert("Client removed from local view.");
@@ -128,6 +155,8 @@ export default function Dashboard() {
     );
   });
 
+  console.log(role);
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#020813] text-navy dark:text-slate-100 transition-colors duration-300">
       <Navbar />
@@ -136,7 +165,7 @@ export default function Dashboard() {
         {/* Header Block */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-navy dark:text-white">
+            <h1 className=" text-2xl md:text-3xl font-extrabold tracking-tight text-navy dark:text-white">
               Client Portal Dashboard
             </h1>
             <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 font-medium">
@@ -144,12 +173,14 @@ export default function Dashboard() {
               configurations.
             </p>
           </div>
-          <Link href="/addClient">
-            <button className="px-5 py-3 bg-linear-to-r from-blue to-sky hover:opacity-95 text-white font-bold text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-blue/10 flex items-center gap-2 cursor-pointer transition-all">
-              <i className="fa-solid fa-user-plus"></i>
-              Add New Client
-            </button>
-          </Link>
+          {["developer", "admin", "salesb2c"].includes(role) && (
+            <Link href="/addClient">
+              <button className="px-3 py-2 md:px-5 md:py-3 bg-linear-to-r from-blue to-sky hover:opacity-95 text-white font-bold text-sm md:text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-blue/10 flex items-center gap-2 cursor-pointer transition-all">
+                <i className="fa-solid fa-user-plus"></i>
+                Add New Client
+              </button>
+            </Link>
+          )}
         </div>
 
         {/* Dashboard Stats */}
@@ -262,7 +293,6 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
-                  {console.log("Rendering clients:", filteredClients)}
                   {filteredClients.map((item) => (
                     <tr
                       key={item.id}
@@ -310,29 +340,39 @@ export default function Dashboard() {
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-3">
                           {/* Edit Button */}
-                          <Link
-                            href={`/editClient/${item.CIN}`}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <button
-                              className="w-8 h-8 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition-colors"
-                              title="Edit Client"
+                          {["developer", "admin", "salesb2c"].includes(
+                            role,
+                          ) && (
+                            <Link
+                              href={`/editClient/${item.CIN}`}
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              <i className="fa-solid fa-pen-to-square text-sm"></i>
-                            </button>
-                          </Link>
+                              <button
+                                className="w-8 h-8 rounded-xl bg-blue-100 hover:bg-blue-200 text-blue-600 flex items-center justify-center cursor-pointer transition-colors"
+                                title="Edit Client"
+                              >
+                                <i className="fa-solid fa-pen-to-square text-sm"></i>
+                              </button>
+                            </Link>
+                          )}
 
                           {/* Delete Button */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(item.id);
-                            }}
-                            className="w-8 h-8 rounded-xl bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center cursor-pointer transition-colors"
-                            title="Delete Client"
-                          >
-                            <i className="fa-solid fa-trash-can text-sm"></i>
-                          </button>
+                          {["developer", "admin"].includes(role) && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete(item.id);
+                              }}
+                              className="w-8 h-8 rounded-xl bg-red-100 hover:bg-red-200 text-red-600 flex items-center justify-center cursor-pointer transition-colors"
+                              title="Delete Client"
+                            >
+                              <i className="fa-solid fa-trash-can text-sm"></i>
+                            </button>
+                          )}
+                          {["viewer", "sales"].includes(role) && (
+                            <p> NO ACTION </p>
+                          )}
+                          {console.log(role)}
                         </div>
                       </td>
                     </tr>

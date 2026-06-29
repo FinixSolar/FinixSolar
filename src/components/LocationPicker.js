@@ -45,7 +45,7 @@ function LocationMarker({ onSelect }) {
           fullAddress: data.display_name || "",
         });
       } catch (error) {
-        console.error("Reverse Geocoding Error:", error);
+        console.log("Reverse Geocoding Error:", error);
 
         onSelect({
           latitude: lat,

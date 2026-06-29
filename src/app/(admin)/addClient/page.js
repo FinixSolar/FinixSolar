@@ -3,21 +3,10 @@
 import { useState } from "react";
 import Navbar from "@/components/Navbar/page";
 import { supabase } from "@/lib/supabase";
-import LocationPicker from "@/components/LocationPicker";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/AuthProvider";
+import toast from "react-hot-toast";
 
-const initialFormData = {
-  CIN: "",
-  consumerName: "",
-  consumerNumber: "",
-  contactPersonName: "",
-  contactPersonNumber: "",
-  subsidyMobile: "",
-  subsidyEmail: "",
-  paymentType: "",
-  location: "",
-  latitude: "",
-  longitude: "",
-};
 const initialTempFormData = {
   CIN: "",
   consumerName: "",
@@ -40,47 +29,13 @@ const initialTempFormData = {
 };
 
 export default function AddClient() {
+  const { user } = useAuth();
   const [tempFromData, setTempFormData] = useState(initialTempFormData);
-  const [formData, setFormData] = useState(initialFormData);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [errors, setErrors] = useState({});
   const [success, setSuccess] = useState("");
-
-  const [geoLoading, setGeoLoading] = useState(false);
-
-  // const getCurrentLocation = () => {
-  //   setError("");
-  //   setSuccess("");
-
-  //   if (!navigator.geolocation) {
-  //     setError("Geolocation is not supported.");
-  //     return;
-  //   }
-
-  //   navigator.geolocation.getCurrentPosition(
-  //     async (position) => {
-  //       const lat = position.coords.latitude;
-  //       const lng = position.coords.longitude;
-  //       const accuracy = position.coords.accuracy;
-
-  //       console.log("Latitude:", lat);
-  //       console.log("Longitude:", lng);
-  //       console.log("Accuracy:", accuracy, "meters");
-
-  //       await reverseGeocode(lat, lng);
-  //     },
-  //     (error) => {
-  //       console.error(error);
-  //       setError("Unable to get current location.");
-  //     },
-  //     {
-  //       enableHighAccuracy: true,
-  //       timeout: 15000,
-  //       maximumAge: 0,
-  //     },
-  //   );
-  // };
+  const router = useRouter();
 
   const getCurrentLocation = () => {
     setError("");
@@ -111,15 +66,10 @@ export default function AddClient() {
             `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
         }));
 
-        console.log("Latitude:", lat);
-        console.log("Longitude:", lng);
-        console.log("Google Maps Link:", googleMapLink);
-        console.log("Accuracy:", accuracy, "meters");
-
         await reverseGeocode(lat, lng);
       },
       (error) => {
-        console.error(error);
+        console.log(error);
         setError("Unable to get current location.");
       },
       {
@@ -168,8 +118,6 @@ export default function AddClient() {
       if (match) {
         lat = parseFloat(match[1]);
         lng = parseFloat(match[2]);
-
-        console.log("Using place coordinates:", lat, lng);
       }
 
       // Format 2: @lat,lng (map center)
@@ -179,8 +127,6 @@ export default function AddClient() {
         if (match) {
           lat = parseFloat(match[1]);
           lng = parseFloat(match[2]);
-
-          console.log("Using map center coordinates:", lat, lng);
         }
       }
 
@@ -215,55 +161,19 @@ export default function AddClient() {
       }
 
       if (!lat || !lng) {
-        console.log("Final URL:", finalUrl);
         throw new Error("Coordinates not found");
       }
-
-      console.log("Final URL:", data.finalUrl);
 
       await reverseGeocode(lat, lng);
 
       setSuccess("Location extracted successfully");
     } catch (error) {
-      console.error(error);
+      console.log(error);
       setError(error.message);
     } finally {
       setLoading(false);
     }
   };
-
-  // const extractCoordinatesFromLink = async () => {
-  //   try {
-  //     const url = tempFromData.googleMapLink;
-
-  //     let lat = null;
-  //     let lng = null;
-
-  //     const match1 = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-
-  //     if (match1) {
-  //       lat = parseFloat(match1[1]);
-  //       lng = parseFloat(match1[2]);
-  //     }
-
-  //     const match2 = url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-
-  //     if (!lat && match2) {
-  //       lat = parseFloat(match2[1]);
-  //       lng = parseFloat(match2[2]);
-  //     }
-
-  //     if (!lat || !lng) {
-  //       throw new Error("Invalid Google Maps URL");
-  //     }
-
-  //     await reverseGeocode(lat, lng);
-
-  //     setSuccess("Location extracted successfully");
-  //   } catch (err) {
-  //     setError(err.message);
-  //   }
-  // };
 
   const reverseGeocode = async (lat, lng) => {
     try {
@@ -286,7 +196,7 @@ export default function AddClient() {
         address: data.display_name || "",
       }));
     } catch (error) {
-      console.error(error);
+      console.log(error);
       setError("Failed to fetch address.");
     }
   };
@@ -435,8 +345,10 @@ export default function AddClient() {
       CIN: tempFromData.CIN,
       consumerName: tempFromData.consumerName,
       consumerNumber: tempFromData.consumerNumber,
-      contactPersonName: tempFromData.contactPersonName,
-      contactPersonNumber: tempFromData.contactPersonNumber,
+      contactPersonName:
+        tempFromData.contactPersonName || tempFromData.consumerName,
+      contactPersonNumber:
+        tempFromData.contactPersonNumber || tempFromData.subsidyMobile,
       subsidyMobile: tempFromData.subsidyMobile,
       subsidyEmail: tempFromData.subsidyEmail,
       paymentType: tempFromData.paymentType,
@@ -466,9 +378,11 @@ export default function AddClient() {
       //   throw new Error(validationError);
       // }
 
-      const { error: insertError } = await supabase
+      const { data: client, error: insertError } = await supabase
         .from("Clients")
-        .insert([clientData]);
+        .insert([clientData])
+        .select()
+        .single();
 
       if (insertError) {
         switch (insertError.code) {
@@ -492,10 +406,35 @@ export default function AddClient() {
       }
 
       setSuccess("Client added successfully.");
+      toast.success("Client added successfully.");
+      await supabase.from("notifications").insert([
+        {
+          title: "New Client Added",
+          message: `${client.consumerName} was added`,
+          type: "client",
+          recipient_id: user.id,
+          created_by: user.id,
+          creator_name: user.user_metadata?.full_name,
+          related_table: "Clients",
+          related_record_id: client.id,
+        },
+      ]);
+
+      await logAudit({
+        action: `New Client Added`,
+        tableName: "Clients",
+        recordId: client.id,
+        client_id: client.id,
+        details: {
+          client: client.consumerName,
+          CIN: client.CIN,
+        },
+      });
 
       setTempFormData(initialTempFormData);
+      return client;
     } catch (err) {
-      console.error("SUPABASE ERROR:", err);
+      console.log("SUPABASE ERROR:", err);
 
       setError(err?.message || "Something went wrong while saving the client.");
     } finally {
@@ -512,26 +451,48 @@ export default function AddClient() {
     console.log("Validation errors:", errors);
     if (!isValid) return;
 
-    await handleUpload();
+    let client = await handleUpload();
+
+    router.push(`/clients/${client.id}`);
+  };
+
+  const logAudit = async ({
+    action,
+    tableName,
+    recordId,
+    details,
+    client_id,
+  }) => {
+    await supabase.from("audit_logs").insert({
+      user_id: user.id,
+      user_name: user.user_metadata?.full_name,
+      action,
+      table_name: tableName,
+      record_id: recordId,
+      client_id: client_id,
+      details,
+    });
   };
 
   return (
     <div>
       <Navbar />
 
-      <main className="flex flex-col w-full min-h-screen pt-25 px-10 pb-10 bg-gray-100">
+      <main className="flex flex-col w-full min-h-screen pt-25 px-10 pb-10">
         <div>
-          <h1 className="text-4xl font-bold text-black">Add New Client</h1>
+          <h1 className="text-4xl font-bold text-black dark:text-gray-100">
+            Add New Client
+          </h1>
 
-          <p className="mt-4 text-gray-600">
+          <p className="mt-4 text-gray-600 dark:text-gray-300">
             Fill in the details below to add a new client.
           </p>
         </div>
 
-        <div className="w-full flex items-center justify-center bg-gray-100 py-4">
+        <div className="w-full flex items-center justify-center bg-gray-100 py-4 mt-4 rounded-2xl dark:bg-slate-900 dark:border-slate-800">
           <form
             onSubmit={handleSubmit}
-            className="max-w-max bg-white shadow-lg rounded-2xl p-6 space-y-5 flex flex-wrap gap-[4%] flex-col md:flex-row"
+            className="max-w-max bg-white shadow-lg rounded-2xl p-6 space-y-5 flex flex-wrap gap-[4%] flex-col md:flex-row dark:bg-slate-900 dark:border-slate-800"
           >
             {error && (
               <div className="w-full p-3 rounded-lg bg-red-100 border border-red-300 text-red-700">
@@ -547,7 +508,7 @@ export default function AddClient() {
 
             {/* CIN */}
             <div className="w-full md:w-[46%]">
-              <label className="block text-[1.1rem] font-bold text-gray-700">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100">
                 CIN
               </label>
               <input
@@ -556,7 +517,7 @@ export default function AddClient() {
                 value={tempFromData.CIN}
                 onChange={handleChange}
                 placeholder="Enter CIN"
-                className={`text-gray-900 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
+                className={`text-gray-900 dark:text-gray-100 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
     ${errors.CIN ? "border-2 border-red-500" : "border border-gray-600"}`}
               />
               {errors.CIN && (
@@ -566,7 +527,7 @@ export default function AddClient() {
 
             {/* Consumer Name */}
             <div className="w-full md:w-[46%]">
-              <label className="block text-[1.1rem] font-bold text-gray-700">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100">
                 Name of Consumer
               </label>
 
@@ -576,7 +537,7 @@ export default function AddClient() {
                 value={tempFromData.consumerName}
                 onChange={handleChange}
                 placeholder="Enter consumer name"
-                className={`text-gray-900 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
+                className={`text-gray-900 dark:text-gray-100 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
     ${
       errors.consumerName ? "border-2 border-red-500" : "border border-gray-600"
     }`}
@@ -591,7 +552,7 @@ export default function AddClient() {
 
             {/* Consumer Number */}
             <div className="w-full md:w-[46%]">
-              <label className="block text-[1.1rem] font-bold text-gray-700">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100">
                 Consumer Number
               </label>
               <input
@@ -600,7 +561,7 @@ export default function AddClient() {
                 value={tempFromData.consumerNumber}
                 onChange={handleChange}
                 placeholder="Enter consumer number"
-                className={`text-gray-900 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
+                className={`text-gray-900 dark:text-gray-100 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
     ${
       errors.consumerNumber
         ? "border-2 border-red-500"
@@ -616,7 +577,7 @@ export default function AddClient() {
 
             {/* Contact Person Name */}
             <div className="w-full md:w-[46%]">
-              <label className="block text-[1.1rem] font-bold text-gray-700">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100">
                 Contact Person Name
               </label>
               <input
@@ -625,7 +586,7 @@ export default function AddClient() {
                 value={tempFromData.contactPersonName}
                 onChange={handleChange}
                 placeholder="Enter contact person name"
-                className={`text-gray-900 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
+                className={`text-gray-900 dark:text-gray-100 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
     ${
       errors.contactPersonName
         ? "border-2 border-red-500"
@@ -641,7 +602,7 @@ export default function AddClient() {
 
             {/* Contact Person Number */}
             <div className="w-full md:w-[46%]">
-              <label className="block text-[1.1rem] font-bold text-gray-700">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100">
                 Contact Person Number
               </label>
               <input
@@ -650,7 +611,7 @@ export default function AddClient() {
                 value={tempFromData.contactPersonNumber}
                 onChange={handleChange}
                 placeholder="Enter contact number"
-                className={`text-gray-900 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
+                className={`text-gray-900 dark:text-gray-100 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
     ${
       errors.contactPersonNumber
         ? "border-2 border-red-500"
@@ -666,7 +627,7 @@ export default function AddClient() {
 
             {/* Subsidy Mobile */}
             <div className="w-full md:w-[46%]">
-              <label className="block text-[1.1rem] font-bold text-gray-700">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100">
                 Mobile No (Registered for Subsidy)
               </label>
               <input
@@ -675,7 +636,7 @@ export default function AddClient() {
                 value={tempFromData.subsidyMobile}
                 onChange={handleChange}
                 placeholder="Enter mobile number"
-                className={`text-gray-900 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
+                className={`text-gray-900 dark:text-gray-100 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
     ${
       errors.subsidyMobile
         ? "border-2 border-red-500"
@@ -691,7 +652,7 @@ export default function AddClient() {
 
             {/* Subsidy Email */}
             <div className="w-full md:w-[46%]">
-              <label className="block text-[1.1rem] font-bold text-gray-700">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100">
                 Email (Registered for Subsidy)
               </label>
               <input
@@ -700,7 +661,7 @@ export default function AddClient() {
                 value={tempFromData.subsidyEmail}
                 onChange={handleChange}
                 placeholder="Enter email address"
-                className={`text-gray-900 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
+                className={`text-gray-900 dark:text-gray-100 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200
     ${
       errors.subsidyEmail ? "border-2 border-red-500" : "border border-gray-600"
     }`}
@@ -714,18 +675,19 @@ export default function AddClient() {
 
             {/* Payment Type */}
             <div className="w-full md:w-[46%]">
-              <label className="block text-[1.1rem] font-bold text-gray-700">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100">
                 Payment Type
               </label>
               <select
                 name="paymentType"
                 value={tempFromData.paymentType || ""}
                 onChange={handleChange}
-                className={`text-gray-900 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200  
+                className={`text-gray-900 dark:text-gray-100 mt-1 w-full rounded-lg p-2 appearance-none dark:bg-slate-900 dark:border-slate-800 outline-none focus:ring-2 focus:ring-gray-200  dropd 
     ${errors.paymentType ? "border-2 border-red-500" : "border border-gray-600"}`}
               >
                 <option value="">Select payment type</option>
                 <option value="Cash">Cash</option>
+                <option value="Online">Online</option>
                 <option value="Loan">Loan</option>
               </select>
               {errors.paymentType && (
@@ -737,7 +699,7 @@ export default function AddClient() {
 
             {/* Location */}
             <div className="w-full md:w-[46%]">
-              <label className="block text-[1.1rem] font-bold text-gray-700">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100">
                 Full Address
               </label>
 
@@ -747,7 +709,7 @@ export default function AddClient() {
                 value={tempFromData.address}
                 onChange={handleChange}
                 placeholder="Enter complete address"
-                className={`text-gray-900 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200 ${
+                className={`text-gray-900 dark:text-gray-100 mt-1 w-full rounded-lg p-2 outline-none focus:ring-2 focus:ring-gray-200 ${
                   errors.address
                     ? "border-2 border-red-500"
                     : "border border-gray-600"
@@ -760,12 +722,12 @@ export default function AddClient() {
             </div>
 
             <div className="w-full md:w-[46%]">
-              <label className="block text-[1.1rem] font-bold text-gray-700 mb-3">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100 mb-3">
                 Location Method
               </label>
 
               <div className="flex gap-6 mb-4">
-                <label className="flex items-center gap-2 text-gray-700">
+                <label className="flex items-center gap-2 text-gray-700 dark:text-gray-400">
                   <input
                     type="radio"
                     name="locationMethod"
@@ -776,7 +738,7 @@ export default function AddClient() {
                   Current Location
                 </label>
 
-                <label className="flex items-center gap-2 text-gray-700">
+                <label className="flex items-center gap-2 text-gray-700 dark:text-gray-400">
                   <input
                     type="radio"
                     name="locationMethod"
@@ -799,7 +761,7 @@ export default function AddClient() {
               )}
               {tempFromData.googleMapLink && (
                 <div className="mt-3">
-                  <label className="block text-sm font-semibold mb-1 text-gray-700">
+                  <label className="block text-sm font-semibold mb-1 text-gray-700 dark:text-gray-400">
                     Google Maps Link
                   </label>
 
@@ -807,14 +769,14 @@ export default function AddClient() {
                     type="text"
                     value={tempFromData.googleMapLink}
                     readOnly
-                    className="text-gray-900 border-2 rounded-lg  p-2 w-full my-2 outline-none mb-4 focus:ring-2 focus:ring-gray-200"
+                    className="text-gray-900 dark:text-gray-100 border-2 rounded-lg  p-2 w-full my-2 outline-none mb-4 focus:ring-2 focus:ring-gray-200"
                   />
 
                   <a
                     href={tempFromData.googleMapLink}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="max-w-max text-gray-900 text-sm rounded-full bg-gray-300 py-2 px-4 flex justify-between items-center gap-2"
+                    className="max-w-max text-gray-900 dark:text-gray-600 dark:bg-gray-200 text-sm rounded-full bg-gray-300 py-2 px-4 flex justify-between items-center gap-2"
                   >
                     <span> Open in Google Maps</span>
                     <span className="material-symbols-outlined">
@@ -829,7 +791,7 @@ export default function AddClient() {
                   <input
                     type="text"
                     value={tempFromData.googleMapLink}
-                    className="text-gray-900 border-2 rounded-lg  p-2 w-full my-2 outline-none mt-4 focus:ring-2 focus:ring-gray-200"
+                    className="text-gray-900 dark:text-gray-100 border-2 rounded-lg  p-2 w-full my-2 outline-none mt-4 focus:ring-2 focus:ring-gray-200"
                     onChange={(e) =>
                       setTempFormData({
                         ...tempFromData,
@@ -850,7 +812,7 @@ export default function AddClient() {
               )}
             </div>
             <div className="w-full md:w-[46%] py-2">
-              <label className="block text-[1.1rem] font-bold text-gray-700">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100">
                 Latitude
               </label>
 
@@ -863,7 +825,7 @@ export default function AddClient() {
             </div>
 
             <div className="w-full md:w-[46%] py-2">
-              <label className="block text-[1.1rem] font-bold text-gray-700">
+              <label className="block text-[1.1rem] font-bold text-gray-700  dark:text-gray-100">
                 Longitude
               </label>
 

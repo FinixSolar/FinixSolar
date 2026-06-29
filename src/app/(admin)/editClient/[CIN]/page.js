@@ -34,6 +34,7 @@ export default function EditClient() {
   }, []);
 
   const fetchClient = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from("Clients")
       .select("*")
@@ -41,9 +42,11 @@ export default function EditClient() {
       .single();
 
     if (error) {
-      console.error(error);
+      console.log(error);
       return;
     }
+
+    setLoading(false);
 
     setFormData({
       CIN: data.CIN || "",
@@ -76,7 +79,7 @@ export default function EditClient() {
         }));
       },
       (error) => {
-        console.error(error);
+        console.log(error);
         alert("Unable to get location");
       },
     );
@@ -159,16 +162,37 @@ export default function EditClient() {
 
       setSuccess("Client updated successfully!");
 
+      const { data: clientId } = await supabase
+        .from("Clients")
+        .select("id")
+        .eq("CIN", formData.CIN)
+        .single();
+
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push(`/clients/${clientId.id}`);
       }, 1500);
     } catch (err) {
-      console.error(err);
+      console.log(err);
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 dark:bg-zinc-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative flex h-16 w-16 items-center justify-center">
+            <div className="absolute h-16 w-16 animate-spin rounded-full border-4 border-[#1e6cfc] border-t-transparent"></div>
+            <div className="h-8 w-8 rounded-full bg-[#ffc600] animate-pulse"></div>
+          </div>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            Fetching Client Detials....
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -378,7 +402,8 @@ export default function EditClient() {
     ${errors.paymentType ? "border-2 border-red-500" : "border border-gray-600"}`}
               >
                 <option value="">Select payment type</option>
-                <option value="cash">Cash</option>
+                <option value="Cash">Cash</option>
+                <option value="Online">Online</option>
                 <option value="Loan">Loan</option>
               </select>
               {errors.paymentType && (
@@ -388,7 +413,6 @@ export default function EditClient() {
               )}
             </div>
 
-            {/* Location */}
             {/* Location */}
             <div className="w-full md:w-[46%]">
               <label className="block text-[1.1rem] font-bold text-gray-700">
@@ -444,6 +468,9 @@ export default function EditClient() {
 
             {/* Submit Button */}
             <div className="w-full mt-4">
+              <p className="text-gray-800 text-lg mb-4">
+                Submit and move to edit File details...
+              </p>
               <button
                 type="submit"
                 disabled={loading}

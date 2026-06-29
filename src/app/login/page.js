@@ -29,7 +29,7 @@ export default function LoginPage() {
       await signIn(email, password);
       router.push("/dashboard");
     } catch (err) {
-      console.error(err);
+      console.log(err);
       setError(err.message || "Invalid email or password. Please try again.");
       setLoading(false);
     }
@@ -44,20 +44,23 @@ export default function LoginPage() {
       <div className="w-full max-w-md z-10 animate-fade-in">
         {/* Card */}
         <div className="glass-card rounded-2xl shadow-xl p-8 transition-all duration-300">
-          
           {/* Logo & Header */}
           <div className="flex flex-col items-center mb-8">
             <Link href="/" className="flex items-center gap-2.5 group mb-4">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue to-sky flex items-center justify-center shadow-lg shadow-blue/20 group-hover:scale-105 transition-all duration-300">
-                <svg xmlns="http://www.w3.org/2000/svg"
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth="2.5"
                   stroke="currentColor"
-                  className="w-5 h-5 text-white">
-                  <path strokeLinecap="round"
+                  className="w-5 h-5 text-white"
+                >
+                  <path
+                    strokeLinecap="round"
                     strokeLinejoin="round"
-                    d="M12 3v2m0 14v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M3 12h2m14 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42M12 7a5 5 0 100 10 5 5 0 000-10z" />
+                    d="M12 3v2m0 14v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M3 12h2m14 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42M12 7a5 5 0 100 10 5 5 0 000-10z"
+                  />
                 </svg>
               </div>
               <span className="font-bold text-navy dark:text-white text-2xl tracking-tight">
@@ -75,8 +78,19 @@ export default function LoginPage() {
           {/* Error Alert */}
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-orange/10 border border-orange/20 text-orange dark:text-orange-light text-xs font-semibold flex items-start gap-3 animate-shake">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="2.5" stroke="currentColor" className="w-4 h-4 shrink-0 mt-0.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth="2.5"
+                stroke="currentColor"
+                className="w-4 h-4 shrink-0 mt-0.5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"
+                />
               </svg>
               <span>{error}</span>
             </div>
@@ -85,7 +99,10 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label htmlFor="email" className="block text-xs font-bold text-navy dark:text-slate-300 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-xs font-bold text-navy dark:text-slate-300 mb-2"
+              >
                 Email Address
               </label>
               <div className="relative">
@@ -105,7 +122,10 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-bold text-navy dark:text-slate-300 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-xs font-bold text-navy dark:text-slate-300 mb-2"
+              >
                 Password
               </label>
               <div className="relative">
@@ -144,12 +164,14 @@ export default function LoginPage() {
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               Don't have an account?{" "}
-              <Link href="/signup" className="text-blue dark:text-sky hover:underline font-bold transition duration-150">
+              <Link
+                href="/signup"
+                className="text-blue dark:text-sky hover:underline font-bold transition duration-150"
+              >
                 Sign Up
               </Link>
             </p>
           </div>
-
         </div>
       </div>
     </div>

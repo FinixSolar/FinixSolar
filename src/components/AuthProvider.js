@@ -19,11 +19,14 @@ export const AuthProvider = ({ children }) => {
     // Check active session on load
     const getInitialSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
         if (error) throw error;
         setUser(session?.user ?? null);
       } catch (err) {
-        console.error("Error checking initial auth session:", err);
+        console.log("Error checking initial auth session:", err);
       } finally {
         setLoading(false);
       }
@@ -32,12 +35,12 @@ export const AuthProvider = ({ children }) => {
     getInitialSession();
 
     // Listen to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
 
     return () => {
       subscription?.unsubscribe();

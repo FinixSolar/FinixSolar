@@ -367,6 +367,13 @@ const Navbar = () => {
                         <i className="fa-solid fa-chart-line text-slate-400"></i>
                         Dashboard
                       </Link>
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition"
+                      >
+                        Change Password
+                      </Link>
                       <button
                         onClick={handleSignOut}
                         className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-orange hover:bg-orange/5 text-left transition cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1"
